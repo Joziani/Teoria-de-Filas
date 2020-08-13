@@ -1,0 +1,127 @@
+---
+title: "Teoria das Filas"
+author: Joziani Mota Vieira
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+As formações de filas ocorrem porque a procura pelo serviço é maior do que a capacidade do sistema de atender a esta procura. A razão pelo qual os gerentes dos estabelecimentos e o poder público não aumentam suas capacidades de atendimento podem ser resumidas basicamente por dois motivos: inviabilidade econômica e/ou limitação de espaço. <br />
+Dessa forma, a Teoria das Filas tenta através de análises matemáticas detalhadas encontrar um ponto de equilíbrio que satisfaça o cliente e seja viável economicamente para o provedor do serviço.
+
+# Metodologia
+
+Os tipos de modelos de filas são definidos a partir da Notação de Kendall, que representa cada cadeia de filas pelos símbolos da seguinte forma: A/B/c/K/N/Z <br />
+
+* **A**: distribuição do tempo entre chegadas; <br />
+* **B**: disciplina de serviços; <br />
+* **c**: número de servidores; <br />
+* **K**: capacidade total de usuários no sistema; <br />
+* **N**: número de usuários potenciais em uma população fonte; <br />
+* **Z**: disciplina de atendimento. <br />
+
+Usualmente, quando não declarados a capacidade máxima do sistema (K), e o número de clientes a serem atendidos (N), estes serão considerados como ilimitados. <br />
+
+A disciplina de atendimento pode admitir duas politicas. **First In First Out** (primeiro que entra primeiro a sair), ou fila, é a estrutura de atendimento que bancos e hospitais utilizam pois sequem a ordem de chegada em que os primeiros a chegarem serão os primeiros a serem atendidos. **Last In First Out** (último que entra primeiro a sair) é a estrutura habitualmente chamada de pilha e amplamente utilizada na estacagem de produtos. Caso o modelo não declare qual a disciplina de atendimento, entende-se que será utilizada a disciplina FIFO. <br />
+
+### Modelo M/M/2
+
+O modelo M/M/2 da notação de Kendall é uma parametrização simples. Neste caso, a distribuição do tempo entre novas chegadas de clientes ao sistema é suposta exponencial (M). O tempo necessário para realizar cada serviço também segue uma distribuição exponencial (M). A capacidade máxima do sistema e a população fonte são supostamente infinitas. Nas aplicações desse modelo, denotamos por lambda e mu a taxa média de chegada e de atendimento, respectivamente. Além disso, supomos que há dois servidores e que a disciplina da fila é FIFO.
+
+# Exemplo
+
+```{r}
+
+rm(list = ls())
+
+if(!require(queuecomputer)){install.packages("queuecomputer");require(queuecomputer)}
+if(!require(ggplot2)){install.packages("ggplot2");require(ggplot2)}
+
+# Taxa de chegada
+l = c(1/10, 1/3, 1/5, 1/8, 1/8, 1/5, 1/3)
+# Taxa de Serviço
+mu = 1/5
+# Duração da simulação
+duration = 60
+time=0
+# Chegadas antes do banco abrir
+T1 = 0
+while(time<duration){
+  T1 = c(T1,ceiling(rexp(1, rate = l[1])))
+  time <- sum(T1)
+}
+T1=T1[-length(T1)]
+time <- sum(T1)
+nEvents = length(T1) # número total de eventos ocorridos
+antes=nEvents #número de pessoas que chegaram antes do banco abrir
+
+#simulando as chegadas nas proximas 6 horas
+for (i in 2:7) {
+  while(time<duration*i){
+    T1 = c(T1,(ceiling(rexp(1, rate = l[i]))))
+    time <- sum(T1)
+  }
+  T1=T1[-length(T1)]
+}
+T1=T1[-length(T1)]
+T1
+time <- sum(T1)
+time
+nEvents = length(T1)
+nEvents
+
+#simulando os atendimentos
+atend = ceiling(rexp(1, rate = mu))
+
+for (i in 2:nEvents) {
+  atend=c(atend,ceiling(rexp(1, rate = mu)))
+}
+atend
+atend_antes=c(atend[1:antes])
+atend_antes
+
+#Simulação de Chegadas
+print("Simulação de Chegadas")
+cat("Chegada 1:" ,T1[1], "minutos", "\n")
+for (i in 2:nEvents) {
+  a=i-1
+  cat("Chegada" , i,":" ,T1[i], "minutos","após chegada" ,a, "\n")
+}
+
+#Simulação de Atendimentos
+print("Simulação de Atendimentos")
+cat("Atendimento 1: " ,atend[1], "minutos", "\n")
+for (i in 2:nEvents) cat("Atendimento" ,i,":" ,atend[i], "minutos","\n")
+
+filas <- queue_step(arrivals=T1, service=atend, servers=2)
+filas
+summary(filas)
+
+```
+
+## Gráficos
+
+```{r}
+
+## parcelas de densidade dos horários de chegada e partida
+plot(filas, which = 1)
+
+## histogramas dos horários de chegada e partida
+plot(filas, which = 2)
+
+## gráficos de densidade de tempos de espera e sistema
+plot(filas, which = 3)
+
+## função da etapa do comprimento da fila
+plot(filas, which = 4)
+
+## gráfico de intervalo de linhas do status do cliente e do servidor
+plot(filas, which = 5)
+
+## gráfico de distribuição empírica dos horários de chegada e partida
+plot(filas, which = 6)
+
+```
+
